@@ -1,0 +1,258 @@
+.analytics-page {
+  display: flex;
+  height: 100vh;
+}
+
+.dashboard-sidebar {
+  width: 80px;
+  background-color: white;
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.sidebar-logo {
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex-grow: 1;
+}
+
+.sidebar-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+  color: var(--light-text);
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.sidebar-item.active {
+  color: var(--primary-color);
+}
+
+.sidebar-item:hover {
+  background-color: var(--gray-100);
+}
+
+.sidebar-text {
+  font-size: 0.625rem;
+  margin-top: 0.25rem;
+  display: none;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem 0;
+}
+
+.help-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--gray-200);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.help-icon {
+  color: var(--light-text);
+  font-size: 1rem;
+}
+
+.analytics-content {
+  flex-grow: 1;
+  padding: 1.5rem;
+  background-color: white;
+  overflow-y: auto;
+}
+
+.analytics-header {
+  margin-bottom: 1.5rem;
+}
+
+.analytics-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.analytics-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 0.5rem;
+  background-color: white;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #00c853;
+}
+
+.more-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--light-text);
+}
+
+.chart-container {
+  position: relative;
+}
+
+.chart-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  z-index: 10;
+}
+
+.chart-label {
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.chart-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.line-chart {
+  position: relative;
+  height: 200px;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-line {
+  fill: none;
+  stroke: #00c853;
+  stroke-width: 2;
+}
+
+.chart-point {
+  fill: white;
+  stroke: #00c853;
+  stroke-width: 2;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.chart-labels .chart-label {
+  font-size: 0.75rem;
+  color: var(--light-text);
+}
+
+.reply-time-container,
+.resolved-tickets-container,
+.total-chats-container {
+  display: flex;
+}
+
+.reply-time-info,
+.resolved-tickets-info,
+.total-chats-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.reply-time-description,
+.resolved-tickets-description,
+.total-chats-description {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  margin-right: 2rem;
+}
+
+.reply-time-value,
+.total-chats-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #00c853;
+  white-space: nowrap;
+}
+
+.progress-circle-container {
+  width: 100px;
+  height: 100px;
+}
+
+.progress-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progress-circle-bg {
+  fill: none;
+  stroke: var(--gray-200);
+  stroke-width: 3;
+}
+
+.progress-circle-fill {
+  fill: none;
+  stroke: #00c853;
+  stroke-width: 3;
+}
+
+.progress-circle-text {
+  fill: #00c853;
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-anchor: middle;
+  transform: rotate(90deg);
+}
+
+@media (max-width: 768px) {
+  .reply-time-info,
+  .resolved-tickets-info,
+  .total-chats-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .reply-time-description,
+  .resolved-tickets-description,
+  .total-chats-description {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+}

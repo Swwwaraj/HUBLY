@@ -94,10 +94,19 @@ const ChatWidget = ({ onClose, adminId }) => {
       setFormSubmitted(true)
       setShowIntroForm(false)
 
-      // Add thank you message
-      setMessages([
-        ...messages,
-        { id: messages.length + 1, sender: "bot", text: "Thank you for providing your information!" },
+      // Add user introduction and thank you message to the chat UI
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          sender: "user",
+          text: `Hello, my name is ${userInfo.name}. I'd like to learn more about Hubly.`,
+        },
+        {
+          id: prev.length + 2,
+          sender: "bot",
+          text: "Thank you for providing your information! How can I help you today?",
+        },
       ])
 
       // Create a ticket from this chat
@@ -201,47 +210,50 @@ const ChatWidget = ({ onClose, adminId }) => {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Form is now outside the chat messages area */}
         {showIntroForm && !formSubmitted && (
-          <div className="chat-widget-form">
-            <div className="chat-widget-form-header">Introduction Yourself</div>
-            <form onSubmit={handleFormSubmit}>
-              <div className="chat-widget-form-group">
-                <label>Your name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={userInfo.name}
-                  onChange={handleInputChange}
-                  placeholder="Your name"
-                  required
-                />
-              </div>
-              <div className="chat-widget-form-group">
-                <label>Your Phone</label>
-                <input
-                  type="text"
-                  name="phone"
-                  value={userInfo.phone}
-                  onChange={handleInputChange}
-                  placeholder="+1 (000) 000-0000"
-                  required
-                />
-              </div>
-              <div className="chat-widget-form-group">
-                <label>Your Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={userInfo.email}
-                  onChange={handleInputChange}
-                  placeholder="example@gmail.com"
-                  required
-                />
-              </div>
-              <button type="submit" className="chat-widget-form-submit">
-                Thank You!
-              </button>
-            </form>
+          <div className="chat-widget-form-container">
+            <div className="chat-widget-form">
+              <div className="chat-widget-form-header">Introduction Yourself</div>
+              <form onSubmit={handleFormSubmit}>
+                <div className="chat-widget-form-group">
+                  <label>Your name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={userInfo.name}
+                    onChange={handleInputChange}
+                    placeholder="Your name"
+                    required
+                  />
+                </div>
+                <div className="chat-widget-form-group">
+                  <label>Your Phone</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={userInfo.phone}
+                    onChange={handleInputChange}
+                    placeholder="+1 (000) 000-0000"
+                    required
+                  />
+                </div>
+                <div className="chat-widget-form-group">
+                  <label>Your Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={userInfo.email}
+                    onChange={handleInputChange}
+                    placeholder="example@gmail.com"
+                    required
+                  />
+                </div>
+                <button type="submit" className="chat-widget-form-submit">
+                  Thank You!
+                </button>
+              </form>
+            </div>
           </div>
         )}
 
@@ -252,8 +264,9 @@ const ChatWidget = ({ onClose, adminId }) => {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
+            disabled={showIntroForm && !formSubmitted}
           />
-          <button className="chat-widget-send" onClick={handleSendMessage}>
+          <button className="chat-widget-send" onClick={handleSendMessage} disabled={showIntroForm && !formSubmitted}>
             <Send size={18} />
           </button>
         </div>

@@ -20,24 +20,31 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 
     // Filter by status if provided
-    if (status && ["resolved", "unresolved"].includes(status)) {
+    if (status && ["resolved", "unresolved", "in-progress"].includes(status)) {
       query.status = status
     }
 
     // Search functionality
     if (search) {
-      query.$or = [{ title: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }]
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { ticketNumber: { $regex: search, $options: "i" } },
+      ]
     }
+
+    console.log("Tickets query:", query)
 
     const tickets = await Ticket.find(query)
       .populate("assignedTo", "firstName lastName email")
       .populate("createdBy", "firstName lastName email")
       .sort({ createdAt: -1 })
 
+    console.log(`Found ${tickets.length} tickets`)
     res.json(tickets)
   } catch (error) {
     console.error("Get tickets error:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ message: "Server error", error: error.message })
   }
 })
 

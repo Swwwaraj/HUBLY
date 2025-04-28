@@ -18,6 +18,8 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 )
 app.use(express.json())
@@ -28,6 +30,11 @@ app.use("/api/tickets", ticketRoutes)
 app.use("/api/team", teamRoutes)
 app.use("/api/chat", chatRoutes)
 app.use("/api/analytics", analyticsRoutes)
+
+// Add a simple test route to verify the API is working
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "API is running" })
+})
 
 // Socket.io setup for real-time communication
 const io = setupSocket(server)

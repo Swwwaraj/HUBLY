@@ -58,11 +58,22 @@ const ticketSchema = new mongoose.Schema({
   },
   sourceId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: function () {
-      if (this.source === "chat") return "Chat"
-      return null
-    },
+    refPath: "sourceModel",
     default: null,
+  },
+  sourceModel: {
+    type: String,
+    enum: ["Chat", null],
+    default: null,
+  },
+  userInfo: {
+    name: String,
+    email: String,
+    phone: String,
+  },
+  ticketNumber: {
+    type: String,
+    unique: true,
   },
   createdAt: {
     type: Date,
@@ -74,9 +85,44 @@ const ticketSchema = new mongoose.Schema({
   },
 })
 
-// Update the updatedAt field before saving
-ticketSchema.pre("save", function (next) {
+// Generate ticket number before saving
+ticketSchema.pre("save", async function (next) {
   this.updatedAt = Date.now()
+
+  // Only generate ticket number for new tickets
+  if (!this.ticketNumber) {
+    const year = new Date().getFullYear()
+
+    // Find the highest sequential number for this year
+    const highestTicket = await this.constructor.findOne(
+      { ticketNumber: { $regex: `^${year}-` } },
+      { ticketNumber: 1 },
+      { sort: { ticketNumber: -1 } },
+    )
+
+    let sequentialNumber = "00001"
+
+    if (highestTicket && highestTicket.ticketNumber) {
+      const parts = highestTicket.ticketNumber.split("-")
+      if (parts.length === 2) {
+        const currentNumber = Number.parseInt(parts[1], 10)
+        sequentialNumber = (currentNumber + 1).toString().padStart(5, "0")
+      }
+    }
+
+    this.ticketNumber = `${year}-${sequentialNumber}`
+  }
+
+  next()
+})
+
+// Populate references when finding tickets
+ticketSchema.pre(/^find/, function (next) {
+  this.populate("assignedTo", "firstName lastName email").populate("createdBy", "firstName lastName email").populate({
+    path: "comments.author",
+    select: "firstName lastName",
+  })
+
   next()
 })
 

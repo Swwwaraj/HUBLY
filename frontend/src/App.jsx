@@ -12,6 +12,7 @@ import ChatBotPage from "./pages/ChatBotPage"
 import AnalyticsPage from "./pages/AnalyticsPage"
 import SettingsPage from "./pages/SettingsPage"
 import "./styles/global.css"
+import ErrorBoundary from "./components/ErrorBoundary"
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -38,7 +39,9 @@ function AppRoutes() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <ErrorBoundary>
+              <DashboardPage />
+            </ErrorBoundary>
           </ProtectedRoute>
         }
       />

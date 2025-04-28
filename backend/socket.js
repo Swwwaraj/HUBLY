@@ -176,6 +176,8 @@ function setupSocket(server) {
           adminId: adminId,
           source: "chat",
           sourceId: chat._id,
+          sourceModel: "Chat",
+          userInfo: chat.userInfo, // Store user info directly in the ticket
           status: "unresolved",
         })
 

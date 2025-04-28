@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Edit, MessageSquare, User, Clock, Tag } from "react-feather"
+import { X, MessageSquare, User, Clock, Tag } from "react-feather"
 import { ticketsAPI } from "../services/api"
 import { useAuth } from "../context/AuthContext"
 import { teamAPI } from "../services/api"
-import { getSocket } from "../services/socket"
+import { getSocket, updateTicket } from "../services/socket"
 
 const TicketDetailModal = ({ ticket, onClose }) => {
   const [currentTicket, setCurrentTicket] = useState(ticket)
@@ -15,14 +15,26 @@ const TicketDetailModal = ({ ticket, onClose }) => {
   const [teamMembers, setTeamMembers] = useState([])
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
-    title: ticket.title,
-    description: ticket.description,
-    priority: ticket.priority,
-    status: ticket.status,
+    title: ticket.title || "",
+    description: ticket.description || "",
+    priority: ticket.priority || "medium",
+    status: ticket.status || "unresolved",
     assignedTo: ticket.assignedTo?._id || "",
   })
 
   const { user } = useAuth()
+
+  // Format ticket number with year and sequential number
+  const formatTicketNumber = (ticket) => {
+    const date = new Date(ticket.createdAt)
+    const year = date.getFullYear()
+
+    // Get last 5 digits of ticket ID and pad with zeros
+    const ticketId = ticket._id.toString()
+    const sequentialNumber = ticketId.slice(-5).padStart(5, "0")
+
+    return `${year}-${sequentialNumber}`
+  }
 
   // Fetch team members for assignment
   useEffect(() => {
@@ -43,14 +55,14 @@ const TicketDetailModal = ({ ticket, onClose }) => {
     const socket = getSocket()
 
     if (socket) {
-      socket.on("ticket-updated", (updatedTicket) => {
-        if (updatedTicket._id === currentTicket._id) {
-          setCurrentTicket(updatedTicket)
+      socket.on("ticket:update", (data) => {
+        if (data.ticketId === currentTicket._id) {
+          setCurrentTicket(data.ticket)
         }
       })
 
       return () => {
-        socket.off("ticket-updated")
+        socket.off("ticket:update")
       }
     }
   }, [currentTicket._id])
@@ -63,6 +75,7 @@ const TicketDetailModal = ({ ticket, onClose }) => {
     try {
       setLoading(true)
 
+      // Add comment to ticket
       const updatedTicket = {
         ...currentTicket,
         comments: [
@@ -80,13 +93,9 @@ const TicketDetailModal = ({ ticket, onClose }) => {
       setComment("")
 
       // Emit socket event for real-time updates
-      const socket = getSocket()
-      if (socket) {
-        socket.emit("update-ticket", {
-          ticketId: currentTicket._id,
-          updates: { comments: updatedTicket.comments },
-        })
-      }
+      updateTicket(currentTicket._id, {
+        comment: comment,
+      })
     } catch (error) {
       console.error("Error adding comment:", error)
       setError("Failed to add comment. Please try again.")
@@ -103,13 +112,7 @@ const TicketDetailModal = ({ ticket, onClose }) => {
       setCurrentTicket(response.data)
 
       // Emit socket event for real-time updates
-      const socket = getSocket()
-      if (socket) {
-        socket.emit("update-ticket", {
-          ticketId: currentTicket._id,
-          updates: { status },
-        })
-      }
+      updateTicket(currentTicket._id, { status })
     } catch (error) {
       console.error("Error updating status:", error)
       setError("Failed to update status. Please try again.")
@@ -129,13 +132,7 @@ const TicketDetailModal = ({ ticket, onClose }) => {
       setIsEditing(false)
 
       // Emit socket event for real-time updates
-      const socket = getSocket()
-      if (socket) {
-        socket.emit("update-ticket", {
-          ticketId: currentTicket._id,
-          updates: editForm,
-        })
-      }
+      updateTicket(currentTicket._id, editForm)
     } catch (error) {
       console.error("Error updating ticket:", error)
       setError("Failed to update ticket. Please try again.")
@@ -157,11 +154,35 @@ const TicketDetailModal = ({ ticket, onClose }) => {
     return date.toLocaleString()
   }
 
+  // Get user info from ticket
+  const getUserInfo = () => {
+    // If ticket is from chat, try to get user info
+    if (currentTicket.source === "chat" && currentTicket.sourceId) {
+      const userInfo = currentTicket.userInfo || {}
+      return {
+        name: userInfo.name || "Anonymous User",
+        phone: userInfo.phone || "+91 0000000000",
+        email: userInfo.email || "example@gmail.com",
+      }
+    }
+
+    // Otherwise use creator info
+    return {
+      name: currentTicket.createdBy?.firstName
+        ? `${currentTicket.createdBy.firstName} ${currentTicket.createdBy.lastName || ""}`
+        : "Anonymous User",
+      phone: currentTicket.createdBy?.phone || "+91 0000000000",
+      email: currentTicket.createdBy?.email || "example@gmail.com",
+    }
+  }
+
+  const userInfo = getUserInfo()
+
   return (
     <div className="modal-overlay">
       <div className="modal-container ticket-detail-modal">
         <div className="modal-header">
-          <h2>Ticket Details</h2>
+          <h2>Ticket# {formatTicketNumber(currentTicket)}</h2>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -171,7 +192,7 @@ const TicketDetailModal = ({ ticket, onClose }) => {
           {error && <div className="error-message">{error}</div>}
 
           {isEditing ? (
-            <form onSubmit={handleEditSubmit}>
+            <form onSubmit={handleEditSubmit} className="edit-ticket-form">
               <div className="form-group">
                 <label htmlFor="title">Title</label>
                 <input
@@ -259,11 +280,10 @@ const TicketDetailModal = ({ ticket, onClose }) => {
             </form>
           ) : (
             <>
-              <div className="ticket-header">
-                <h3 className="ticket-title">{currentTicket.title}</h3>
+              <div className="ticket-detail-header">
+                <h3 className="ticket-detail-title">{currentTicket.title}</h3>
                 <button className="edit-button" onClick={() => setIsEditing(true)}>
-                  <Edit size={16} />
-                  <span>Edit</span>
+                  Edit
                 </button>
               </div>
 
@@ -275,9 +295,17 @@ const TicketDetailModal = ({ ticket, onClose }) => {
 
                 <div className="meta-item">
                   <User size={16} />
-                  <span>
-                    Created by: {currentTicket.createdBy?.firstName} {currentTicket.createdBy?.lastName}
-                  </span>
+                  <span>From: {userInfo.name}</span>
+                </div>
+
+                <div className="meta-item">
+                  <User size={16} />
+                  <span>Email: {userInfo.email}</span>
+                </div>
+
+                <div className="meta-item">
+                  <User size={16} />
+                  <span>Phone: {userInfo.phone}</span>
                 </div>
 
                 {currentTicket.assignedTo && (

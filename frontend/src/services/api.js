@@ -1,6 +1,6 @@
 import axios from "axios"
 
-const API_URL = process.env.BACKEND_URL || "http://localhost:5000/api"
+const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000/api"
 
 // Create axios instance
 const api = axios.create({
@@ -24,6 +24,15 @@ api.interceptors.request.use(
   },
 )
 
+// Improve the error handling in the interceptors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error.response?.data || error.message)
+    return Promise.reject(error)
+  },
+)
+
 // Auth API
 export const authAPI = {
   register: (userData) => api.post("/auth/register", userData),
@@ -35,7 +44,14 @@ export const authAPI = {
 
 // Tickets API
 export const ticketsAPI = {
-  getAll: (params) => api.get("/tickets", { params }),
+  getAll: async (params) => {
+    try {
+      return await api.get("/tickets", { params })
+    } catch (error) {
+      console.error("Error fetching tickets:", error)
+      throw error
+    }
+  },
   getById: (id) => api.get(`/tickets/${id}`),
   create: (ticketData) => api.post("/tickets", ticketData),
   update: (id, ticketData) => api.put(`/tickets/${id}`, ticketData),

@@ -149,6 +149,8 @@ router.post("/:id/ticket", async (req, res) => {
       adminId: chat.adminId,
       source: "chat",
       sourceId: chatId,
+      sourceModel: "Chat",
+      userInfo: chat.userInfo, // Store user info directly in the ticket
       status: "unresolved",
     })
 

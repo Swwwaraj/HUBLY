@@ -18,6 +18,12 @@ function setupSocket(server) {
   io.use((socket, next) => {
     const token = socket.handshake.auth.token
     if (!token) {
+      // For public chat widget, allow connection without authentication
+      if (socket.handshake.query && socket.handshake.query.public === "true") {
+        socket.isPublic = true
+        socket.join("public")
+        return next()
+      }
       return next(new Error("Authentication error: Token not provided"))
     }
 
@@ -31,20 +37,24 @@ function setupSocket(server) {
   })
 
   io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.user.userId}`)
+    if (socket.isPublic) {
+      console.log("Public client connected")
+    } else {
+      console.log(`User connected: ${socket.user.userId}`)
 
-    // Join admin-specific room
-    if (socket.user.role === "admin") {
-      socket.join(`admin:${socket.user.userId}`)
-      console.log(`Admin joined room: admin:${socket.user.userId}`)
-    } else if (socket.user.adminId) {
-      // Team members join their admin's room
-      socket.join(`admin:${socket.user.adminId}`)
-      console.log(`Team member joined room: admin:${socket.user.adminId}`)
+      // Join admin-specific room
+      if (socket.user.role === "admin") {
+        socket.join(`admin:${socket.user.userId}`)
+        console.log(`Admin joined room: admin:${socket.user.userId}`)
+      } else if (socket.user.adminId) {
+        // Team members join their admin's room
+        socket.join(`admin:${socket.user.adminId}`)
+        console.log(`Team member joined room: admin:${socket.user.adminId}`)
+      }
+
+      // Join user-specific room
+      socket.join(`user:${socket.user.userId}`)
     }
-
-    // Join user-specific room
-    socket.join(`user:${socket.user.userId}`)
 
     // Handle joining a specific chat room
     socket.on("join-chat", (chatId) => {
@@ -71,36 +81,40 @@ function setupSocket(server) {
       try {
         const { chatId, message } = data
 
-        // Validate chat exists and user has access
+        // Validate chat exists
         const chat = await Chat.findById(chatId)
         if (!chat) {
           socket.emit("error", { message: "Chat not found" })
           return
         }
 
-        // Check if user has access to this chat
-        const hasAccess =
-          (socket.user.role === "admin" && chat.adminId.toString() === socket.user.userId) ||
-          (socket.user.adminId && chat.adminId.toString() === socket.user.adminId) ||
-          (chat.assignedTo && chat.assignedTo.toString() === socket.user.userId)
+        // Check if user has access to this chat (skip for public)
+        if (!socket.isPublic) {
+          const hasAccess =
+            (socket.user.role === "admin" && chat.adminId.toString() === socket.user.userId) ||
+            (socket.user.adminId && chat.adminId.toString() === socket.user.adminId) ||
+            (chat.assignedTo && chat.assignedTo.toString() === socket.user.userId)
 
-        if (!hasAccess) {
-          socket.emit("error", { message: "Unauthorized access to chat" })
-          return
+          if (!hasAccess) {
+            socket.emit("error", { message: "Unauthorized access to chat" })
+            return
+          }
         }
 
         // Add message to chat
         const newMessage = {
-          sender: "agent",
+          sender: socket.isPublic ? "user" : "agent",
           content: message,
-          senderId: socket.user.userId,
+          senderId: socket.isPublic ? null : socket.user.userId,
           timestamp: Date.now(),
         }
 
         chat.messages.push(newMessage)
 
-        // Update first agent response time if not set
-        if (!chat.firstAgentResponseAt) {
+        // Update response times
+        if (newMessage.sender === "user" && !chat.firstUserMessageAt) {
+          chat.firstUserMessageAt = Date.now()
+        } else if (newMessage.sender === "agent" && !chat.firstAgentResponseAt) {
           chat.firstAgentResponseAt = Date.now()
         }
 
@@ -111,8 +125,8 @@ function setupSocket(server) {
           const ticket = await Ticket.findById(chat.ticketId)
           if (ticket) {
             ticket.comments.push({
-              author: socket.user.userId,
-              content: message,
+              author: socket.isPublic ? chat.adminId : socket.user.userId,
+              content: `${socket.isPublic ? "Customer" : "Agent"}: ${message}`,
               createdAt: Date.now(),
             })
             await ticket.save()
@@ -125,7 +139,16 @@ function setupSocket(server) {
           }
         }
 
-        // Emit message to all users in the admin room
+        // Emit message to the chat room
+        io.to(`chat:${chatId}`).emit("chat:message", {
+          chatId,
+          message: {
+            ...newMessage,
+            _id: chat.messages[chat.messages.length - 1]._id,
+          },
+        })
+
+        // Also emit to admin room
         io.to(`admin:${chat.adminId}`).emit("chat:message", {
           chatId,
           message: {
@@ -138,8 +161,6 @@ function setupSocket(server) {
         socket.emit("error", { message: "Failed to send message" })
       }
     })
-
-    // Handle new chat from website  { message: "Failed to send message" })
 
     // Handle new chat from website
     socket.on("chat:new", async (data) => {
@@ -177,7 +198,7 @@ function setupSocket(server) {
           source: "chat",
           sourceId: chat._id,
           sourceModel: "Chat",
-          userInfo: chat.userInfo, // Store user info directly in the ticket
+          userInfo: chat.userInfo,
           status: "unresolved",
         })
 
@@ -210,14 +231,16 @@ function setupSocket(server) {
         }
 
         // Check if user has access to this ticket
-        const hasAccess =
-          (socket.user.role === "admin" && ticket.adminId.toString() === socket.user.userId) ||
-          (socket.user.adminId && ticket.adminId.toString() === socket.user.adminId) ||
-          (ticket.assignedTo && ticket.assignedTo.toString() === socket.user.userId)
+        if (!socket.isPublic) {
+          const hasAccess =
+            (socket.user.role === "admin" && ticket.adminId.toString() === socket.user.userId) ||
+            (socket.user.adminId && ticket.adminId.toString() === socket.user.adminId) ||
+            (ticket.assignedTo && ticket.assignedTo.toString() === socket.user.userId)
 
-        if (!hasAccess) {
-          socket.emit("error", { message: "Unauthorized access to ticket" })
-          return
+          if (!hasAccess) {
+            socket.emit("error", { message: "Unauthorized access to ticket" })
+            return
+          }
         }
 
         // Update ticket fields
@@ -226,7 +249,7 @@ function setupSocket(server) {
         if (updates.assignedTo !== undefined) ticket.assignedTo = updates.assignedTo
         if (updates.comment) {
           ticket.comments.push({
-            author: socket.user.userId,
+            author: socket.isPublic ? ticket.adminId : socket.user.userId,
             content: updates.comment,
             createdAt: Date.now(),
           })
@@ -267,11 +290,15 @@ function setupSocket(server) {
     socket.on("check-missed-chats", async () => {
       try {
         // Only admins can check for missed chats
-        if (socket.user.role !== "admin") {
+        if (!socket.isPublic && socket.user.role !== "admin") {
           return
         }
 
-        const adminId = socket.user.userId
+        const adminId = socket.isPublic ? null : socket.user.userId
+
+        if (!adminId) {
+          return
+        }
 
         // Find active chats with user messages but no agent response
         const chats = await Chat.find({
@@ -300,25 +327,32 @@ function setupSocket(server) {
             chat.missedAt = now
             await chat.save()
 
-            // Create a ticket from the missed chat
-            const ticket = new Ticket({
-              title: `Missed Chat - ${chat.userInfo.name || "Anonymous"}`,
-              description: `Missed chat from ${chat.userInfo.name || "Anonymous"} (${chat.userInfo.email || "No email"}).\nFirst message: ${chat.messages[0]?.content || "No message"}`,
-              status: "unresolved",
-              priority: "high",
-              createdBy: adminId,
-              adminId,
-              source: "chat",
-              sourceId: chat._id,
-            })
+            // Create a ticket from the missed chat if not already created
+            if (!chat.ticketId) {
+              const ticket = new Ticket({
+                title: `Missed Chat - ${chat.userInfo.name || "Anonymous"}`,
+                description: `Missed chat from ${chat.userInfo.name || "Anonymous"} (${chat.userInfo.email || "No email"}).\nFirst message: ${chat.messages[0]?.content || "No message"}`,
+                status: "unresolved",
+                priority: "high",
+                createdBy: adminId,
+                adminId,
+                source: "chat",
+                sourceId: chat._id,
+                userInfo: chat.userInfo,
+              })
 
-            await ticket.save()
+              await ticket.save()
+
+              // Link the ticket to the chat
+              chat.ticketId = ticket._id
+              await chat.save()
+            }
 
             // Notify admin
             io.to(`admin:${adminId}`).emit("chat-missed", {
               chatId: chat._id,
               missedAt: chat.missedAt,
-              ticket: ticket,
+              ticketId: chat.ticketId,
             })
           }
         }
@@ -327,9 +361,25 @@ function setupSocket(server) {
       }
     })
 
+    // Set up interval to check for missed chats (every minute)
+    let missedChatsInterval
+    if (!socket.isPublic && socket.user?.role === "admin") {
+      missedChatsInterval = setInterval(() => {
+        socket.emit("check-missed-chats")
+      }, 60000)
+    }
+
     // Handle disconnect
     socket.on("disconnect", () => {
-      console.log(`User disconnected: ${socket.user.userId}`)
+      if (missedChatsInterval) {
+        clearInterval(missedChatsInterval)
+      }
+
+      if (socket.isPublic) {
+        console.log("Public client disconnected")
+      } else {
+        console.log(`User disconnected: ${socket.user.userId}`)
+      }
     })
   })
 

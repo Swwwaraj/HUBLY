@@ -13,10 +13,16 @@ const setupSocket = require("./socket")
 const app = express()
 const server = http.createServer(app)
 
+// Default values for development
+const PORT = process.env.PORT || 5000
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/hubly"
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key_here"
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000"
+
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: FRONTEND_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -42,7 +48,7 @@ const io = setupSocket(server)
 // MongoDB Connection with retry logic
 const connectWithRetry = () => {
   mongoose
-    .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/hubly", {
+    .connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     })
@@ -66,7 +72,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Something went wrong!", error: err.message })
 })
 
-const PORT = process.env.PORT || 5000
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`))
 
 // Handle graceful shutdown

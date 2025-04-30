@@ -1,6 +1,7 @@
 import axios from "axios"
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000/api"
+// Use default values for development
+const API_URL = "http://localhost:5000/api"
 
 // Create axios instance
 const api = axios.create({
@@ -29,6 +30,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("API Error:", error.response?.data || error.message)
+
+    // Handle token expiration or invalid token
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      // If token is invalid, clear it and redirect to login
+      if (error.response.data.message === "Invalid token.") {
+        localStorage.removeItem("token")
+        window.location.href = "/login"
+      }
+    }
+
     return Promise.reject(error)
   },
 )
@@ -40,6 +51,7 @@ export const authAPI = {
   getProfile: () => api.get("/auth/me"),
   updateProfile: (userData) => api.put("/auth/profile", userData),
   inviteTeamMember: (data) => api.post("/auth/invite", data),
+  verifyInvite: (token) => api.get(`/auth/invite/${token}`),
 }
 
 // Tickets API

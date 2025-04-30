@@ -1,23 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
 import "../styles/team.css"
-import HublyLogo from "../components/HublyLogo"
-import {
-  Home,
-  MessageSquare,
-  BarChart2,
-  FileText,
-  Users,
-  Settings,
-  Edit,
-  Trash,
-  Plus,
-  ChevronDown,
-} from "react-feather"
+import { Edit, Trash, Plus, ChevronDown, Copy } from "react-feather"
 import { useAuth } from "../context/AuthContext"
 import { teamAPI } from "../services/api"
+import { authAPI } from "../services/api"
+import Sidebar from "../components/Sidebar"
 
 const TeamPage = () => {
   const [teamMembers, setTeamMembers] = useState([])
@@ -31,6 +20,8 @@ const TeamPage = () => {
     email: "",
     role: "member",
   })
+  const [inviteUrl, setInviteUrl] = useState("")
+  const [showCopyTooltip, setShowCopyTooltip] = useState(false)
 
   const { user } = useAuth()
 
@@ -62,6 +53,7 @@ const TeamPage = () => {
       email: "",
       role: "member",
     })
+    setInviteUrl("")
   }
 
   const handleInputChange = (e) => {
@@ -74,26 +66,23 @@ const TeamPage = () => {
 
   const handleSaveMember = async () => {
     // Validate inputs
-    if (!newMember.name || !newMember.email) {
+    if (!newMember.email) {
       return
     }
 
     try {
-      const [firstName, ...lastNameParts] = newMember.name.split(" ")
-      const lastName = lastNameParts.join(" ")
-
-      const response = await teamAPI.add({
-        firstName,
-        lastName: lastName || "",
+      const response = await authAPI.inviteTeamMember({
         email: newMember.email,
         role: newMember.role,
       })
 
+      setInviteUrl(response.data.inviteUrl)
+
       // Since we're just inviting, we'll add a placeholder member
       const newTeamMember = {
         _id: Date.now().toString(), // Temporary ID
-        firstName,
-        lastName: lastName || "",
+        firstName: newMember.name.split(" ")[0] || "",
+        lastName: newMember.name.split(" ").slice(1).join(" ") || "",
         email: newMember.email,
         role: newMember.role,
         phone: "+1 (000) 000-0000", // Default phone
@@ -101,11 +90,16 @@ const TeamPage = () => {
       }
 
       setTeamMembers([...teamMembers, newTeamMember])
-      handleCloseAddModal()
     } catch (error) {
       console.error("Error adding team member:", error)
       setError("Failed to add team member. Please try again.")
     }
+  }
+
+  const handleCopyInviteUrl = () => {
+    navigator.clipboard.writeText(inviteUrl)
+    setShowCopyTooltip(true)
+    setTimeout(() => setShowCopyTooltip(false), 2000)
   }
 
   const handleEditMember = (id) => {
@@ -139,43 +133,7 @@ const TeamPage = () => {
 
   return (
     <div className="team-page">
-      <div className="dashboard-sidebar">
-        <div className="sidebar-logo">
-          <HublyLogo />
-        </div>
-        <div className="sidebar-menu">
-          <Link to="/dashboard" className="sidebar-item">
-            <Home size={20} />
-            <span className="sidebar-text">Dashboard</span>
-          </Link>
-          <Link to="/contact-center" className="sidebar-item">
-            <MessageSquare size={20} />
-            <span className="sidebar-text">Contact Center</span>
-          </Link>
-          <Link to="/analytics" className="sidebar-item">
-            <BarChart2 size={20} />
-            <span className="sidebar-text">Analytics</span>
-          </Link>
-          <Link to="/documents" className="sidebar-item">
-            <FileText size={20} />
-            <span className="sidebar-text">Documents</span>
-          </Link>
-          <Link to="/team" className="sidebar-item active">
-            <Users size={20} />
-            <span className="sidebar-text">Team</span>
-          </Link>
-          <Link to="/settings" className="sidebar-item">
-            <Settings size={20} />
-            <span className="sidebar-text">Settings</span>
-          </Link>
-        </div>
-        <div className="sidebar-footer">
-          <button className="help-button">
-            <span className="help-icon">?</span>
-          </button>
-        </div>
-      </div>
-
+      <Sidebar />
       <div className="team-content">
         <div className="team-header">
           <h1 className="team-title">Team</h1>
@@ -195,7 +153,7 @@ const TeamPage = () => {
                   </th>
                   <th>Phone</th>
                   <th>Email</th>
-                  <th>role</th>
+                  <th>Role</th>
                   <th></th>
                 </tr>
               </thead>
@@ -241,61 +199,83 @@ const TeamPage = () => {
             <div className="modal-content">
               <h2 className="modal-title">Add Team members</h2>
               <p className="modal-description">
-                Talk with colleagues in a group chat. Messages in this group are only visible to it's participants. New
-                teammates may only be invited by the administrators.
+                Talk with colleagues in a group chat. Messages in this group are only visible to its participants. New
+                teammates may only be invited by administrators.
               </p>
 
-              <div className="form-group">
-                <label htmlFor="name">User name</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  placeholder="User name"
-                  value={newMember.name}
-                  onChange={handleInputChange}
-                  className="form-control"
-                />
-              </div>
+              {!inviteUrl ? (
+                <>
+                  <div className="form-group">
+                    <label htmlFor="name">User name</label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      placeholder="User name"
+                      value={newMember.name}
+                      onChange={handleInputChange}
+                      className="form-control"
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label htmlFor="email">Email ID</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="Email ID"
-                  value={newMember.email}
-                  onChange={handleInputChange}
-                  className="form-control"
-                />
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="email">Email ID</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      placeholder="Email ID"
+                      value={newMember.email}
+                      onChange={handleInputChange}
+                      className="form-control"
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label htmlFor="role">Designation</label>
-                <div className="select-wrapper">
-                  <select
-                    id="role"
-                    name="role"
-                    value={newMember.role}
-                    onChange={handleInputChange}
-                    className="form-control"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <ChevronDown size={16} className="select-icon" />
-                </div>
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="role">Designation</label>
+                    <div className="select-wrapper">
+                      <select
+                        id="role"
+                        name="role"
+                        value={newMember.role}
+                        onChange={handleInputChange}
+                        className="form-control"
+                      >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <ChevronDown size={16} className="select-icon" />
+                    </div>
+                  </div>
 
-              <div className="modal-actions">
-                <button className="cancel-button" onClick={handleCloseAddModal}>
-                  Cancel
-                </button>
-                <button className="save-button" onClick={handleSaveMember}>
-                  Save
-                </button>
-              </div>
+                  <div className="modal-actions">
+                    <button className="cancel-button" onClick={handleCloseAddModal}>
+                      Cancel
+                    </button>
+                    <button className="save-button" onClick={handleSaveMember}>
+                      Create Invitation
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="invite-url-container">
+                    <p>Share this invitation link with your team member:</p>
+                    <div className="invite-url-box">
+                      <input type="text" readOnly value={inviteUrl} className="invite-url-input" />
+                      <button className="copy-button" onClick={handleCopyInviteUrl}>
+                        <Copy size={16} />
+                        {showCopyTooltip && <span className="copy-tooltip">Copied!</span>}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="modal-actions">
+                    <button className="save-button" onClick={handleCloseAddModal}>
+                      Done
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -305,7 +285,7 @@ const TeamPage = () => {
         <div className="modal-overlay">
           <div className="delete-member-modal">
             <div className="modal-content">
-              <p className="modal-message">this teammate will be deleted.</p>
+              <p className="modal-message">This teammate will be deleted.</p>
               <div className="modal-actions">
                 <button className="cancel-button" onClick={cancelDeleteMember}>
                   Cancel
@@ -318,18 +298,6 @@ const TeamPage = () => {
           </div>
         </div>
       )}
-
-      <div className="notification-banner">
-        <p>by default all the chats will go to admin</p>
-        <div className="notification-actions">
-          <button className="notification-action-button">
-            <Edit size={16} />
-          </button>
-          <button className="notification-action-button">
-            <MessageSquare size={16} />
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

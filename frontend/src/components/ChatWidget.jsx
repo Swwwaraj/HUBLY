@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Send } from "react-feather"
 import { chatAPI } from "../services/api"
-import { getSocket } from "../services/socket"
+import "../styles/chat-widget.css"
 
 const ChatWidget = ({ onClose, adminId }) => {
   const [showIntroForm, setShowIntroForm] = useState(true)
@@ -13,57 +13,41 @@ const ChatWidget = ({ onClose, adminId }) => {
     phone: "",
     email: "",
   })
-  const [messages, setMessages] = useState([{ id: 1, sender: "bot", text: "Hey!" }])
+  const [messages, setMessages] = useState([{ id: 1, sender: "bot", text: "How can I help you?" }])
   const [inputMessage, setInputMessage] = useState("")
   const [chatId, setChatId] = useState(null)
+  const [chatbotSettings, setChatbotSettings] = useState(null)
   const messagesEndRef = useRef(null)
-
-  useEffect(() => {
-    // Show intro form after a short delay
-    const timer = setTimeout(() => {
-      setShowIntroForm(true)
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [])
 
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Listen for socket events
+  // Load chatbot settings
   useEffect(() => {
-    if (chatId) {
-      const socket = getSocket()
+    const loadChatbotSettings = async () => {
+      try {
+        if (adminId) {
+          const response = await chatAPI.getChatbotSettings(adminId)
+          setChatbotSettings(response.data)
 
-      if (!socket) {
-        // For public chat widget, we don't need authentication
-        // We'll handle messages through REST API
-        return
-      }
-
-      // Listen for new messages
-      const handleNewMessage = (data) => {
-        if (data.chatId === chatId) {
-          setMessages((prev) => [
-            ...prev,
+          // Update welcome message and appearance
+          setMessages([
             {
-              id: prev.length + 1,
-              sender: data.message.sender === "agent" ? "bot" : "user",
-              text: data.message.content,
+              id: 1,
+              sender: "bot",
+              text: response.data.initialMessage || "How can I help you?",
             },
           ])
         }
-      }
-
-      socket.on("chat:message", handleNewMessage)
-
-      return () => {
-        socket.off("chat:message", handleNewMessage)
+      } catch (error) {
+        console.error("Error loading chatbot settings:", error)
       }
     }
-  }, [chatId])
+
+    loadChatbotSettings()
+  }, [adminId])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -112,7 +96,12 @@ const ChatWidget = ({ onClose, adminId }) => {
       // Create a ticket from this chat
       await chatAPI.createTicketFromChat(response.data._id, {
         title: `New inquiry from ${userInfo.name}`,
-        description: `Customer information:\nName: ${userInfo.name}\nEmail: ${userInfo.email}\nPhone: ${userInfo.phone}\n\nInitial message: Hello, I'd like to learn more about Hubly.`,
+        description: `Customer information:
+Name: ${userInfo.name}
+Email: ${userInfo.email}
+Phone: ${userInfo.phone}
+
+Initial message: Hello, I'd like to learn more about Hubly.`,
         priority: "medium",
       })
     } catch (error) {
@@ -184,10 +173,42 @@ const ChatWidget = ({ onClose, adminId }) => {
     }
   }
 
+  // Get styles from chatbot settings
+  const getHeaderStyle = () => {
+    if (chatbotSettings?.headerColor) {
+      return { backgroundColor: chatbotSettings.headerColor }
+    }
+    return { backgroundColor: "#34475B" }
+  }
+
+  const getBodyStyle = () => {
+    if (chatbotSettings?.backgroundColor) {
+      return { backgroundColor: chatbotSettings.backgroundColor }
+    }
+    return { backgroundColor: "#FFFFFF" }
+  }
+
+  const getPlaceholders = () => {
+    if (chatbotSettings) {
+      return {
+        name: chatbotSettings.formName || "Your name",
+        phone: chatbotSettings.formPhone || "+1 (000) 000-0000",
+        email: chatbotSettings.formEmail || "example@gmail.com",
+      }
+    }
+    return {
+      name: "Your name",
+      phone: "+1 (000) 000-0000",
+      email: "example@gmail.com",
+    }
+  }
+
+  const placeholders = getPlaceholders()
+
   return (
     <div className="chat-widget-container">
       <div className="chat-widget">
-        <div className="chat-widget-header">
+        <div className="chat-widget-header" style={getHeaderStyle()}>
           <div className="chat-widget-avatar">
             <div className="avatar-circle orange"></div>
           </div>
@@ -196,7 +217,7 @@ const ChatWidget = ({ onClose, adminId }) => {
             ×
           </button>
         </div>
-        <div className="chat-widget-messages">
+        <div className="chat-widget-messages" style={getBodyStyle()}>
           {messages.map((message) => (
             <div key={message.id} className={`chat-widget-message ${message.sender}`}>
               {message.sender === "bot" && (
@@ -223,7 +244,7 @@ const ChatWidget = ({ onClose, adminId }) => {
                     name="name"
                     value={userInfo.name}
                     onChange={handleInputChange}
-                    placeholder="Your name"
+                    placeholder={placeholders.name}
                     required
                   />
                 </div>
@@ -234,7 +255,7 @@ const ChatWidget = ({ onClose, adminId }) => {
                     name="phone"
                     value={userInfo.phone}
                     onChange={handleInputChange}
-                    placeholder="+1 (000) 000-0000"
+                    placeholder={placeholders.phone}
                     required
                   />
                 </div>
@@ -245,7 +266,7 @@ const ChatWidget = ({ onClose, adminId }) => {
                     name="email"
                     value={userInfo.email}
                     onChange={handleInputChange}
-                    placeholder="example@gmail.com"
+                    placeholder={placeholders.email}
                     required
                   />
                 </div>

@@ -1,108 +1,116 @@
 "use client"
 
-import { createContext, useState, useContext } from "react"
+import { createContext, useState, useContext, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { authAPI } from "../services/api"
 
-// Create the AuthContext
-const AuthContext = createContext(null)
+const AuthContext = createContext()
 
-// Custom hook to use the AuthContext
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
-}
+export const useAuth = () => useContext(AuthContext)
 
-// AuthProvider component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const navigate = useNavigate()
 
-  // Mock login function
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token")
+      if (token) {
+        try {
+          const response = await authAPI.getProfile()
+          setUser(response.data)
+        } catch (error) {
+          console.error("Authentication error:", error)
+          // Clear invalid token
+          localStorage.removeItem("token")
+          setUser(null)
+        }
+      }
+      setLoading(false)
+    }
+
+    checkAuth()
+  }, [])
+
+  // Login function
   const login = async (credentials) => {
     try {
-      setLoading(true)
       setError(null)
-      // In a real app, this would make an API call
-      console.log("Login with:", credentials)
-
-      // Mock successful login
-      const mockUser = {
-        id: "1",
-        firstName: "John",
-        lastName: "Doe",
-        email: credentials.email,
-        role: "admin",
-      }
-
-      // Store user in state
-      setUser(mockUser)
+      const response = await authAPI.login(credentials)
+      const { token, user } = response.data
 
       // Store token in localStorage
-      localStorage.setItem("token", "mock-token")
+      localStorage.setItem("token", token)
 
-      return mockUser
-    } catch (err) {
-      setError("Login failed. Please check your credentials.")
-      throw err
-    } finally {
-      setLoading(false)
+      // Set user in state
+      setUser(user)
+
+      return { success: true }
+    } catch (error) {
+      console.error("Login error:", error)
+      setError(error.response?.data?.message || "Login failed. Please try again.")
+      return { success: false, error: error.response?.data?.message || "Login failed" }
     }
   }
 
-  // Mock register function
+  // Register function
   const register = async (userData) => {
     try {
-      setLoading(true)
       setError(null)
-      // In a real app, this would make an API call
-      console.log("Register with:", userData)
-
-      // Mock successful registration
-      const mockUser = {
-        id: "1",
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        role: userData.role || "admin",
-      }
-
-      // Store user in state
-      setUser(mockUser)
+      const response = await authAPI.register(userData)
+      const { token, user } = response.data
 
       // Store token in localStorage
-      localStorage.setItem("token", "mock-token")
+      localStorage.setItem("token", token)
 
-      return mockUser
-    } catch (err) {
-      setError("Registration failed. Please try again.")
-      throw err
-    } finally {
-      setLoading(false)
+      // Set user in state
+      setUser(user)
+
+      return { success: true }
+    } catch (error) {
+      console.error("Registration error:", error)
+      setError(error.response?.data?.message || "Registration failed. Please try again.")
+      return { success: false, error: error.response?.data?.message || "Registration failed" }
     }
   }
 
   // Logout function
   const logout = () => {
-    setUser(null)
     localStorage.removeItem("token")
+    setUser(null)
+    navigate("/login")
   }
 
-  // Check if user is authenticated
-  const isAuthenticated = !!user
-
-  // Value to be provided by the context
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    register,
-    logout,
-    isAuthenticated,
+  // Update profile function
+  const updateProfile = async (userData) => {
+    try {
+      setError(null)
+      const response = await authAPI.updateProfile(userData)
+      setUser(response.data)
+      return { success: true }
+    } catch (error) {
+      console.error("Update profile error:", error)
+      setError(error.response?.data?.message || "Update failed. Please try again.")
+      return { success: false, error: error.response?.data?.message || "Update failed" }
+    }
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        error,
+        login,
+        register,
+        logout,
+        updateProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }

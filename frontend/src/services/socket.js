@@ -7,7 +7,7 @@ export const initSocket = (token) => {
     socket.disconnect()
   }
 
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000"
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "https://hubly-backend-4cx3.onrender.com"
 
   socket = io(backendUrl, {
     auth: { token },

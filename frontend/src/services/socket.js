@@ -1,4 +1,4 @@
-import { io } from "socket.io-client"
+import io from "socket.io-client"
 
 let socket = null
 
@@ -7,14 +7,15 @@ export const initSocket = (token) => {
     socket.disconnect()
   }
 
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || "https://hubly-backend-4cx3.onrender.com"
-
-  socket = io(backendUrl, {
+  socket = io("https://hubly-backend-4cx3.onrender.com", {
     auth: { token },
+    reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
-    timeout: 10000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
   })
+
 
   socket.on("connect", () => {
     console.log("Socket connected")

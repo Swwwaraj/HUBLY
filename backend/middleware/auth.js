@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken")
+const mongoose = require("mongoose")
 const User = require("../models/User")
 const Ticket = require("../models/Ticket")
 const Chat = require("../models/Chat")
@@ -14,6 +15,12 @@ const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    // Check if token is expired
+    if (decoded.exp < Date.now() / 1000) {
+      return res.status(401).json({ message: "Token has expired" })
+    }
+
     req.user = decoded
     next()
   } catch (error) {
@@ -37,33 +44,14 @@ const isAdmin = async (req, res, next) => {
 const isAdminOrAssigned = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { userId, role } = req.user
+    const { userId, role, adminId } = req.user
 
-    // If admin, allow access
-    if (role === "admin") {
-      // Verify the resource belongs to this admin
-      let resource
-
-      if (req.path.includes("/tickets")) {
-        resource = await Ticket.findById(id)
-      } else if (req.path.includes("/chat")) {
-        resource = await Chat.findById(id)
-      }
-
-      if (!resource) {
-        return res.status(404).json({ message: "Resource not found" })
-      }
-
-      if (resource.adminId.toString() !== userId) {
-        return res.status(403).json({ message: "Access denied. Not your resource." })
-      }
-
-      return next()
+    // Validate if the resource ID is valid
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid resource ID" })
     }
 
-    // If team member, check if assigned
     let resource
-
     if (req.path.includes("/tickets")) {
       resource = await Ticket.findById(id)
     } else if (req.path.includes("/chat")) {
@@ -74,10 +62,18 @@ const isAdminOrAssigned = async (req, res, next) => {
       return res.status(404).json({ message: "Resource not found" })
     }
 
-    // Allow if assigned to this user or if unassigned and belongs to user's admin
+    // If the user is an admin, check if the admin owns the resource
+    if (role === "admin") {
+      if (resource.adminId.toString() !== userId) {
+        return res.status(403).json({ message: "Access denied. Not your resource." })
+      }
+      return next()
+    }
+
+    // Non-admin users can only access resources assigned to them or those owned by their admin
     if (
       (resource.assignedTo && resource.assignedTo.toString() === userId) ||
-      (!resource.assignedTo && resource.adminId.toString() === req.user.adminId)
+      (!resource.assignedTo && resource.adminId.toString() === adminId)
     ) {
       return next()
     }

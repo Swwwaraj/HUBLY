@@ -1,23 +1,23 @@
 "use client"
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { useEffect, useState } from "react"
 import { AuthProvider, useAuth } from "./context/AuthContext"
-import LandingPage from "./pages/LandingPage"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
 import DashboardPage from "./pages/DashboardPage"
 import ContactCenterPage from "./pages/ContactCenterPage"
-import TeamPage from "./pages/TeamPage"
-import ChatBotPage from "./pages/ChatBotPage"
 import AnalyticsPage from "./pages/AnalyticsPage"
+import TeamPage from "./pages/TeamPage"
 import SettingsPage from "./pages/SettingsPage"
-import "./styles/global.css"
+import ChatBotPage from "./pages/ChatBotPage"
+import LandingPage from "./pages/LandingPage"
 import ErrorBoundary from "./components/ErrorBoundary"
-import { useEffect } from "react"
+import "./styles/global.css"
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth()
+  const { user, loading } = useAuth()
 
   if (loading) {
     return (
@@ -28,41 +28,86 @@ const ProtectedRoute = ({ children }) => {
     )
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />
+  if (!user) {
+    return <Navigate to="/login" replace />
   }
 
   return children
 }
 
-function AppRoutes() {
+// Public route component (redirects to dashboard if logged in)
+const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth()
 
-  // Add loading styles
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+}
+
+function AppContent() {
+  const { verifyAuth } = useAuth()
+  const [initializing, setInitializing] = useState(true)
+
   useEffect(() => {
-    if (loading) {
-      document.body.classList.add("app-loading")
-    } else {
-      document.body.classList.remove("app-loading")
+    const initializeAuth = async () => {
+      await verifyAuth()
+      setInitializing(false)
     }
 
-    return () => {
-      document.body.classList.remove("app-loading")
-    }
-  }, [loading])
+    initializeAuth()
+  }, [verifyAuth])
+
+  if (initializing) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Initializing...</p>
+      </div>
+    )
+  }
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <PublicRoute>
+            <SignupPage />
+          </PublicRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <ErrorBoundary>
-              <DashboardPage />
-            </ErrorBoundary>
+            <DashboardPage />
           </ProtectedRoute>
         }
       />
@@ -70,29 +115,7 @@ function AppRoutes() {
         path="/contact-center"
         element={
           <ProtectedRoute>
-            <ErrorBoundary>
-              <ContactCenterPage />
-            </ErrorBoundary>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/team"
-        element={
-          <ProtectedRoute>
-            <ErrorBoundary>
-              <TeamPage />
-            </ErrorBoundary>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/chat-bot"
-        element={
-          <ProtectedRoute>
-            <ErrorBoundary>
-              <ChatBotPage />
-            </ErrorBoundary>
+            <ContactCenterPage />
           </ProtectedRoute>
         }
       />
@@ -100,9 +123,15 @@ function AppRoutes() {
         path="/analytics"
         element={
           <ProtectedRoute>
-            <ErrorBoundary>
-              <AnalyticsPage />
-            </ErrorBoundary>
+            <AnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/team"
+        element={
+          <ProtectedRoute>
+            <TeamPage />
           </ProtectedRoute>
         }
       />
@@ -110,24 +139,32 @@ function AppRoutes() {
         path="/settings"
         element={
           <ProtectedRoute>
-            <ErrorBoundary>
-              <SettingsPage />
-            </ErrorBoundary>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/" />} />
+      <Route
+        path="/chat-bot"
+        element={
+          <ProtectedRoute>
+            <ChatBotPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
 function App() {
   return (
-    <AuthProvider>
+    <ErrorBoundary>
       <Router>
-        <AppRoutes />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </Router>
-    </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

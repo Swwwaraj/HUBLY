@@ -1,21 +1,17 @@
 import axios from "axios"
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || "https://hubly-backend-4cx3.onrender.com/api"
-
-// Create axios instance
+// Create axios instance with base URL
 const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: "https://hubly-backend-4cx3.onrender.com",
+  timeout: 30000,
 })
 
-// Add request interceptor to add auth token
+// Add request interceptor to add token to all requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token")
     if (token) {
-      config.headers["Authorization"] = `Bearer ${token}`
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -24,78 +20,71 @@ api.interceptors.request.use(
   },
 )
 
-// Improve the error handling in the interceptors
+// Add response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response
+  },
   (error) => {
-    // Handle token expiration or invalid token
-    if (error.response && error.response.status === 403) {
-      // Clear token if it's invalid
+    if (error.response && error.response.status === 401) {
+      // Unauthorized, clear token and redirect to login
       localStorage.removeItem("token")
-
-      // Redirect to login if not already there
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login"
-      }
+      window.location.href = "/login"
     }
-
-    console.error("API Error:", error.response?.data || error.message)
     return Promise.reject(error)
   },
 )
 
 // Auth API
 export const authAPI = {
-  register: (userData) => api.post("/auth/register", userData),
-  login: (credentials) => api.post("/auth/login", credentials),
-  getProfile: () => api.get("/auth/me"),
-  updateProfile: (userData) => api.put("/auth/profile", userData),
-  inviteTeamMember: (data) => api.post("/auth/invite", data),
-}
-
-// Tickets API
-export const ticketsAPI = {
-  getAll: async (params) => {
-    try {
-      return await api.get("/tickets", { params })
-    } catch (error) {
-      console.error("Error fetching tickets:", error)
-      throw error
-    }
-  },
-  getById: (id) => api.get(`/tickets/${id}`),
-  create: (ticketData) => api.post("/tickets", ticketData),
-  update: (id, ticketData) => api.put(`/tickets/${id}`, ticketData),
-  delete: (id) => api.delete(`/tickets/${id}`),
-  addComment: (id, comment) => api.post(`/tickets/${id}/comments`, { content: comment }),
+  login: (credentials) => api.post("/api/auth/login", credentials),
+  signup: (userData) => api.post("/api/auth/signup", userData),
+  verifyToken: () => api.get("/api/auth/verify"),
 }
 
 // Team API
 export const teamAPI = {
-  getAll: () => api.get("/team"),
-  add: (memberData) => api.post("/team", memberData),
-  update: (id, memberData) => api.put(`/team/${id}`, memberData),
-  delete: (id) => api.delete(`/team/${id}`),
-}
-
-// Chat API
-export const chatAPI = {
-  getAll: (params) => api.get("/chat", { params }),
-  getById: (id) => api.get(`/chat/${id}`),
-  create: (chatData) => api.post("/chat", chatData),
-  update: (id, chatData) => api.put(`/chat/${id}`, chatData),
-  addMessage: (id, messageData) => api.post(`/chat/${id}/messages`, messageData),
-  getChatbotSettings: (adminId) => api.get(`/chat/settings/${adminId}`),
-  updateChatbotSettings: (adminId, settingsData) => api.put(`/chat/settings/${adminId}`, settingsData),
-  getAdminId: () => api.get("/chat/admin"),
-  createTicketFromChat: (chatId, ticketData) => api.post(`/chat/${chatId}/ticket`, ticketData),
-  updateTicketFromChat: (chatId, updateData) => api.put(`/chat/${chatId}/ticket`, updateData),
+  getMembers: () => api.get("/api/team"),
+  addMember: (memberData) => api.post("/api/team", memberData),
+  updateMember: (id, memberData) => api.put(`/api/team/${id}`, memberData),
+  deleteMember: (id) => api.delete(`/api/team/${id}`),
 }
 
 // Analytics API
 export const analyticsAPI = {
-  getTicketAnalytics: (params) => api.get("/analytics/tickets", { params }),
-  getChatAnalytics: (params) => api.get("/analytics/chats", { params }),
+  getOverview: () => api.get("/api/analytics/overview"),
+  getTicketStats: () => api.get("/api/analytics/tickets"),
+  getResponseTimes: () => api.get("/api/analytics/response-times"),
+}
+
+// Tickets API
+export const ticketsAPI = {
+  getAll: () => api.get("/api/tickets"),
+  getById: (id) => api.get(`/api/tickets/${id}`),
+  create: (ticketData) => api.post("/api/tickets", ticketData),
+  update: (id, ticketData) => api.put(`/api/tickets/${id}`, ticketData),
+  delete: (id) => api.delete(`/api/tickets/${id}`),
+  addComment: (id, comment) => api.post(`/api/tickets/${id}/comments`, { content: comment }),
+}
+
+// Chat API
+export const chatAPI = {
+  getAll: () => api.get("/api/chats"),
+  getById: (id) => api.get(`/api/chats/${id}`),
+  create: (chatData) => api.post("/api/chats", chatData),
+  addMessage: (id, message) => api.post(`/api/chats/${id}/messages`, message),
+  updateStatus: (id, status) => api.put(`/api/chats/${id}/status`, { status }),
+  createTicketFromChat: (id, ticketData) => api.post(`/api/chats/${id}/ticket`, ticketData),
+  updateTicketFromChat: (id, ticketData) => api.put(`/api/chats/${id}/ticket`, ticketData),
+  
+  // New method to fetch admin ID
+  getAdminId: () => api.get("/api/chat/admin-id"), // Assuming you have a route for this
+}
+
+// Chatbot Settings API
+export const chatbotAPI = {
+  getSettings: () => api.get("/api/chatbot/settings"),
+  updateSettings: (settings) => api.put("/api/chatbot/settings", settings),
 }
 
 export default api

@@ -8,7 +8,7 @@ const ChatbotSettings = require("./models/ChatbotSettings")
 function setupSocket(server) {
   const io = socketIo(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      origin: process.env.FRONTEND_URL || "https://hubly--six.vercel.app",
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -139,8 +139,6 @@ function setupSocket(server) {
       }
     })
 
-    // Handle new chat from website  { message: "Failed to send message" })
-
     // Handle new chat from website
     socket.on("chat:new", async (data) => {
       try {
@@ -260,70 +258,6 @@ function setupSocket(server) {
       } catch (error) {
         console.error("Socket ticket:update error:", error)
         socket.emit("error", { message: "Failed to update ticket" })
-      }
-    })
-
-    // Handle missed chat check
-    socket.on("check-missed-chats", async () => {
-      try {
-        // Only admins can check for missed chats
-        if (socket.user.role !== "admin") {
-          return
-        }
-
-        const adminId = socket.user.userId
-
-        // Find active chats with user messages but no agent response
-        const chats = await Chat.find({
-          adminId,
-          status: "active",
-          firstUserMessageAt: { $ne: null },
-          firstAgentResponseAt: null,
-        })
-
-        // Check each chat against the missed chat timer
-        for (const chat of chats) {
-          // Get admin's chatbot settings
-          const settings = await ChatbotSettings.findOne({ adminId })
-          if (!settings) continue
-
-          const { hours, minutes, seconds } = settings.missedChatTimer
-          const missedTimeMs = (hours * 3600 + minutes * 60 + seconds) * 1000
-
-          const now = Date.now()
-          const messageTime = chat.firstUserMessageAt.getTime()
-
-          // If time elapsed is greater than missed time threshold
-          if (now - messageTime > missedTimeMs) {
-            // Mark chat as missed
-            chat.status = "missed"
-            chat.missedAt = now
-            await chat.save()
-
-            // Create a ticket from the missed chat
-            const ticket = new Ticket({
-              title: `Missed Chat - ${chat.userInfo.name || "Anonymous"}`,
-              description: `Missed chat from ${chat.userInfo.name || "Anonymous"} (${chat.userInfo.email || "No email"}).\nFirst message: ${chat.messages[0]?.content || "No message"}`,
-              status: "unresolved",
-              priority: "high",
-              createdBy: adminId,
-              adminId,
-              source: "chat",
-              sourceId: chat._id,
-            })
-
-            await ticket.save()
-
-            // Notify admin
-            io.to(`admin:${adminId}`).emit("chat-missed", {
-              chatId: chat._id,
-              missedAt: chat.missedAt,
-              ticket: ticket,
-            })
-          }
-        }
-      } catch (error) {
-        console.error("Socket error:", error)
       }
     })
 

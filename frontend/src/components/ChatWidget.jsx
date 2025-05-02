@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Send } from "react-feather"
 import { chatAPI } from "../services/api"
 import { getSocket } from "../services/socket"
+import "../styles/chat-widget.css"
 
 const ChatWidget = ({ onClose, adminId }) => {
   const [showIntroForm, setShowIntroForm] = useState(true)
@@ -13,16 +14,11 @@ const ChatWidget = ({ onClose, adminId }) => {
     phone: "",
     email: "",
   })
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState([{ id: 1, sender: "bot", text: "Hey!" }])
   const [inputMessage, setInputMessage] = useState("")
   const [chatId, setChatId] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef(null)
-
-  // Load initial bot message
-  useEffect(() => {
-    setMessages([{ id: 1, sender: "bot", text: "Hey! How can I help you today?" }])
-  }, [])
 
   // Scroll to bottom of messages
   useEffect(() => {
@@ -86,6 +82,8 @@ const ChatWidget = ({ onClose, adminId }) => {
         userInfo,
       })
 
+      console.log('API response:', response); // Debugging response from API
+
       setChatId(response.data._id)
 
       // Add message to the chat
@@ -119,7 +117,7 @@ const ChatWidget = ({ onClose, adminId }) => {
         priority: "medium",
       })
     } catch (error) {
-      console.error("Error creating chat:", error)
+      console.error("Error creating chat:", error.response ? error.response.data : error.message)
       // Show error message to user
       setMessages((prev) => [
         ...prev,
@@ -236,14 +234,7 @@ const ChatWidget = ({ onClose, adminId }) => {
       <div className="chat-widget">
         <div className="chat-widget-header">
           <div className="chat-widget-avatar">
-            <div className="avatar-circle orange">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16 12C16 12.41 15.66 12.75 15.25 12.75H8.75C8.34 12.75 8 12.41 8 12C8 11.59 8.34 11.25 8.75 11.25H15.25C15.66 11.25 16 11.59 16 12Z"
-                  fill="white"
-                />
-              </svg>
-            </div>
+            <img src="/hubly-logo-small.png" alt="Hubly" className="chat-logo" />
           </div>
           <div className="chat-widget-title">Hubly</div>
           <button className="chat-widget-close" onClick={onClose}>
@@ -255,14 +246,7 @@ const ChatWidget = ({ onClose, adminId }) => {
             <div key={message.id} className={`chat-widget-message ${message.sender}`}>
               {message.sender === "bot" && (
                 <div className="chat-widget-message-avatar">
-                  <div className="avatar-circle orange">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16 12C16 12.41 15.66 12.75 15.25 12.75H8.75C8.34 12.75 8 12.41 8 12C8 11.59 8.34 11.25 8.75 11.25H15.25C15.66 11.25 16 11.59 16 12Z"
-                        fill="white"
-                      />
-                    </svg>
-                  </div>
+                  <img src="/hubly-logo-small.png" alt="Hubly" className="chat-logo" />
                 </div>
               )}
               <div className="chat-widget-message-bubble">{message.text}</div>
@@ -275,7 +259,7 @@ const ChatWidget = ({ onClose, adminId }) => {
         {showIntroForm && !formSubmitted && (
           <div className="chat-widget-form-container">
             <div className="chat-widget-form">
-              <div className="chat-widget-form-header">Introduce Yourself</div>
+              <div className="chat-widget-form-header">Introduction Yourself</div>
               <form onSubmit={handleFormSubmit}>
                 <div className="chat-widget-form-group">
                   <label>Your name</label>
@@ -310,8 +294,8 @@ const ChatWidget = ({ onClose, adminId }) => {
                     required
                   />
                 </div>
-                <button type="submit" className="chat-widget-form-submit" disabled={isLoading}>
-                  {isLoading ? "Submitting..." : "Submit"}
+                <button type="submit" className="chat-widget-form-submit">
+                  Thank You!
                 </button>
               </form>
             </div>

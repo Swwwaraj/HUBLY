@@ -1,7 +1,5 @@
-"use client"
-
 import { createContext, useState, useContext, useEffect } from "react"
-import api from "../services/api"
+import { authAPI } from "../services/api"
 
 // Create the AuthContext
 const AuthContext = createContext(null)
@@ -27,10 +25,10 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem("token")
       if (token) {
         try {
-          const response = await api.get("/auth/me")
-          setUser(response.data)
+          const response = await authAPI.verifyToken()
+          setUser(response.data.user)
         } catch (err) {
-          console.error("Token validation failed:", err)
+          console.error("Token verification failed:", err)
           localStorage.removeItem("token")
         }
       }
@@ -46,7 +44,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true)
       setError(null)
 
-      const response = await api.post("/auth/login", credentials)
+      const response = await authAPI.login(credentials)
 
       // Store token in localStorage
       localStorage.setItem("token", response.data.token)
@@ -70,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true)
       setError(null)
 
-      const response = await api.post("/auth/register", userData)
+      const response = await authAPI.signup(userData)
 
       // Store token in localStorage
       localStorage.setItem("token", response.data.token)
@@ -97,6 +95,18 @@ export const AuthProvider = ({ children }) => {
   // Check if user is authenticated
   const isAuthenticated = !!user
 
+  // verifyAuth function (added to check token validity and set user)
+  const verifyAuth = async () => {
+    try {
+      const response = await authAPI.verifyToken()
+      setUser(response.data.user)
+    } catch (err) {
+      console.error("Auth verification failed", err)
+      setUser(null)
+      localStorage.removeItem("token")
+    }
+  }
+
   // Value to be provided by the context
   const value = {
     user,
@@ -106,6 +116,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     isAuthenticated,
+    verifyAuth, // Include this here
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

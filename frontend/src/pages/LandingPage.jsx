@@ -79,7 +79,7 @@ const LandingPage = () => {
             <div className="notification-bubble">
               <div className="notification-avatar">
                 <img
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213301-nyWInhLcQHqBH1BycEvCuAbQE4nMvl.png"
+                  src="https://i.postimg.cc/PJNjXwV3/Screenshot-2025-05-02-001447.png"
                   alt="Jerry Calzoni"
                   className="avatar-img"
                 />
@@ -90,7 +90,7 @@ const LandingPage = () => {
               </div>
             </div>
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213301-nyWInhLcQHqBH1BycEvCuAbQE4nMvl.png"
+              src="https://i.postimg.cc/PJNjXwV3/Screenshot-2025-05-02-001447.png"
               alt="Business meeting"
               className="hero-image"
             />
@@ -158,37 +158,37 @@ const LandingPage = () => {
         <div className="container partners-container">
           <div className="partner-logo">
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+              src="https://i.postimg.cc/Pf0bQkb9/Screenshot-2025-05-02-222402-Photoroom.png"
               alt="Adobe"
             />
           </div>
           <div className="partner-logo">
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+              src="https://i.postimg.cc/dQG3gPPz/Screenshot-2025-05-02-222427-Photoroom.png"
               alt="Elastic"
             />
           </div>
           <div className="partner-logo">
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+              src="https://i.postimg.cc/8zzCF7JS/Screenshot-2025-05-02-222433-Photoroom.png"
               alt="Opendoor"
             />
           </div>
           <div className="partner-logo">
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+              src="https://i.postimg.cc/gjpzGjF1/Screenshot-2025-05-02-222441-Photoroom.png"
               alt="Airtable"
             />
           </div>
           <div className="partner-logo">
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+              src="https://i.postimg.cc/dQG3gPPz/Screenshot-2025-05-02-222427-Photoroom.png"
               alt="Elastic"
             />
           </div>
           <div className="partner-logo">
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+              src="https://i.postimg.cc/66V6YrCK/Screenshot-2025-05-02-222457-Photoroom.png"
               alt="Framer"
             />
           </div>
@@ -210,30 +210,28 @@ const LandingPage = () => {
       {/* Funnel Section */}
       <section className="funnel-section">
         <div className="container funnel-container">
-          <h3 className="funnel-title">MULTIPLE PLATFORMS TOGETHER!</h3>
+          
           <div className="funnel-diagram">
             <div className="funnel-content">
-              <p className="funnel-description">
-                Email communication is a breeze with our fully integrated, drag & drop email builder.
-              </p>
+              
               <div className="funnel-stages">
                 <div className="funnel-stage">
-                  <h4>CAPTURE</h4>
+                  <h3>MULTIPLE PLATFORMS TOGETHER!</h3>
                   <p>Capture leads using our landing pages, surveys, forms, calendars, inbound phone system & more!</p>
                 </div>
                 <div className="funnel-stage">
-                  <h4>NURTURE</h4>
+                  <h3>NURTURE</h3>
                   <p>Capture leads using our landing pages, surveys, forms, calendars, inbound phone system & more!</p>
                 </div>
                 <div className="funnel-stage">
-                  <h4>CLOSE</h4>
+                  <h3>CLOSE</h3>
                   <p>Capture leads using our landing pages, surveys, forms, calendars, inbound phone system & more!</p>
                 </div>
               </div>
             </div>
             <div className="funnel-image">
               <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-04-21%20213322-Cv7K2UZ2Xh70ZNFjKdGHOfcqaqkJW1.png"
+                src="https://i.postimg.cc/gJzrDbF3/Screenshot-2025-05-02-231422-Photoroom.png"
                 alt="Funnel diagram"
                 className="funnel-img"
               />

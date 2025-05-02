@@ -334,7 +334,8 @@
 /* Partners Section */
 .partners-section {
   padding: 2rem 0;
-  background-color: var(--gray-100);
+  background-color: #184E7F;
+  opacity: 50%;
   border-bottom: 1px solid var(--gray-200);
 }
 
@@ -356,7 +357,8 @@
 }
 
 .partner-logo img {
-  height: 30px;
+  height: 100px;
+  
   object-fit: contain;
 }
 
@@ -387,8 +389,10 @@
 
 /* Funnel Section */
 .funnel-section {
-  padding: 4rem 0;
+  padding: 4rem;
+
   background-color: var(--white);
+ 
 }
 
 .funnel-container {

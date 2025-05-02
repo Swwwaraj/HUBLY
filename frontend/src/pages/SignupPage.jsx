@@ -173,7 +173,7 @@ const SignupPage = () => {
           </div>
         </div>
         <div className="auth-image-container">
-          <img src="/placeholder.svg?height=600&width=500" alt="Person working on laptop" className="auth-image" />
+          <img src="https://i.postimg.cc/GmgSRfnC/backgroud.png" alt="Person working on laptop" className="auth-image" />
         </div>
       </div>
     </div>

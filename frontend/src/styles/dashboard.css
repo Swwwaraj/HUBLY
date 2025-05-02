@@ -46,7 +46,8 @@
   background-color: #f3f4f6;
 }
 
-.sidebar-icon {
+.sidebar-icon,
+.chat-bot-icon {
   margin-bottom: 0.25rem;
 }
 
@@ -90,6 +91,9 @@
 }
 
 .dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 2rem;
 }
 
@@ -182,7 +186,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
 }
 
 .dashboard-search {
@@ -309,6 +312,18 @@
   padding: 0.75rem;
   border-radius: 0.375rem;
   margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.retry-button {
+  background-color: #b91c1c;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
 }
 
 .empty-state {
@@ -431,6 +446,11 @@
   color: var(--light-text);
 }
 
+.ticket-status {
+  margin-left: auto;
+  margin-right: 1rem;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -548,14 +568,14 @@ textarea.form-control {
 }
 
 /* Ticket Detail Styles */
-.ticket-header {
+.ticket-detail-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.ticket-title {
+.ticket-detail-title {
   font-size: 1.25rem;
   font-weight: 500;
   color: var(--text-color);
@@ -761,6 +781,18 @@ textarea.form-control {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+.empty-table-message {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.chat-bot-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (min-width: 992px) {

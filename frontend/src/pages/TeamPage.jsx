@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 import "../styles/team.css"
-import { Edit, Trash, Plus, ChevronDown, Copy } from "react-feather"
+import HublyLogo from "../components/HublyLogo"
+import { Home, MessageSquare, BarChart2, Users, Settings, Edit, Trash, Plus, ChevronDown } from "react-feather"
 import { useAuth } from "../context/AuthContext"
 import { teamAPI } from "../services/api"
-import { authAPI } from "../services/api"
-import Sidebar from "../components/Sidebar"
 
 const TeamPage = () => {
   const [teamMembers, setTeamMembers] = useState([])
@@ -20,8 +20,6 @@ const TeamPage = () => {
     email: "",
     role: "member",
   })
-  const [inviteUrl, setInviteUrl] = useState("")
-  const [showCopyTooltip, setShowCopyTooltip] = useState(false)
 
   const { user } = useAuth()
 
@@ -29,6 +27,7 @@ const TeamPage = () => {
     const fetchTeamMembers = async () => {
       try {
         setLoading(true)
+        setError(null)
         const response = await teamAPI.getAll()
         setTeamMembers(response.data)
       } catch (error) {
@@ -39,8 +38,10 @@ const TeamPage = () => {
       }
     }
 
-    fetchTeamMembers()
-  }, [])
+    if (user) {
+      fetchTeamMembers()
+    }
+  }, [user])
 
   const handleAddMember = () => {
     setShowAddModal(true)
@@ -53,7 +54,6 @@ const TeamPage = () => {
       email: "",
       role: "member",
     })
-    setInviteUrl("")
   }
 
   const handleInputChange = (e) => {
@@ -66,23 +66,27 @@ const TeamPage = () => {
 
   const handleSaveMember = async () => {
     // Validate inputs
-    if (!newMember.email) {
+    if (!newMember.name || !newMember.email) {
       return
     }
 
     try {
-      const response = await authAPI.inviteTeamMember({
+      setLoading(true)
+      const [firstName, ...lastNameParts] = newMember.name.split(" ")
+      const lastName = lastNameParts.join(" ")
+
+      const response = await teamAPI.add({
+        firstName,
+        lastName: lastName || "",
         email: newMember.email,
         role: newMember.role,
       })
 
-      setInviteUrl(response.data.inviteUrl)
-
       // Since we're just inviting, we'll add a placeholder member
       const newTeamMember = {
         _id: Date.now().toString(), // Temporary ID
-        firstName: newMember.name.split(" ")[0] || "",
-        lastName: newMember.name.split(" ").slice(1).join(" ") || "",
+        firstName,
+        lastName: lastName || "",
         email: newMember.email,
         role: newMember.role,
         phone: "+1 (000) 000-0000", // Default phone
@@ -90,16 +94,13 @@ const TeamPage = () => {
       }
 
       setTeamMembers([...teamMembers, newTeamMember])
+      handleCloseAddModal()
     } catch (error) {
       console.error("Error adding team member:", error)
       setError("Failed to add team member. Please try again.")
+    } finally {
+      setLoading(false)
     }
-  }
-
-  const handleCopyInviteUrl = () => {
-    navigator.clipboard.writeText(inviteUrl)
-    setShowCopyTooltip(true)
-    setTimeout(() => setShowCopyTooltip(false), 2000)
   }
 
   const handleEditMember = (id) => {
@@ -115,6 +116,7 @@ const TeamPage = () => {
   const confirmDeleteMember = async () => {
     if (memberToDelete) {
       try {
+        setLoading(true)
         await teamAPI.delete(memberToDelete)
         setTeamMembers(teamMembers.filter((member) => member._id !== memberToDelete))
         setShowDeleteModal(false)
@@ -122,6 +124,8 @@ const TeamPage = () => {
       } catch (error) {
         console.error("Error deleting team member:", error)
         setError("Failed to delete team member. Please try again.")
+      } finally {
+        setLoading(false)
       }
     }
   }
@@ -133,7 +137,50 @@ const TeamPage = () => {
 
   return (
     <div className="team-page">
-      <Sidebar />
+      <div className="dashboard-sidebar">
+        <div className="sidebar-logo">
+          <HublyLogo />
+        </div>
+        <div className="sidebar-menu">
+          <Link to="/dashboard" className="sidebar-item">
+            <Home size={20} />
+            <span className="sidebar-text">Dashboard</span>
+          </Link>
+          <Link to="/contact-center" className="sidebar-item">
+            <MessageSquare size={20} />
+            <span className="sidebar-text">Contact Center</span>
+          </Link>
+          <Link to="/analytics" className="sidebar-item">
+            <BarChart2 size={20} />
+            <span className="sidebar-text">Analytics</span>
+          </Link>
+          <Link to="/chat-bot" className="sidebar-item">
+            <div className="chat-bot-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16 12C16 12.41 15.66 12.75 15.25 12.75H8.75C8.34 12.75 8 12.41 8 12C8 11.59 8.34 11.25 8.75 11.25H15.25C15.66 11.25 16 11.59 16 12ZM15.25 9.75H8.75C8.34 9.75 8 9.41 8 9C8 8.59 8.34 8.25 8.75 8.25H15.25C15.66 8.25 16 8.59 16 9C16 9.41 15.66 9.75 15.25 9.75ZM15.25 15.75H8.75C8.34 15.75 8 15.41 8 15C8 14.59 8.34 14.25 8.75 14.25H15.25C15.66 14.25 16 14.59 16 15C16 15.41 15.66 15.75 15.25 15.75Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
+            <span className="sidebar-text">Chat Bot</span>
+          </Link>
+          <Link to="/team" className="sidebar-item active">
+            <Users size={20} />
+            <span className="sidebar-text">Team</span>
+          </Link>
+          <Link to="/settings" className="sidebar-item">
+            <Settings size={20} />
+            <span className="sidebar-text">Settings</span>
+          </Link>
+        </div>
+        <div className="sidebar-footer">
+          <button className="help-button">
+            <span className="help-icon">?</span>
+          </button>
+        </div>
+      </div>
+
       <div className="team-content">
         <div className="team-header">
           <h1 className="team-title">Team</h1>
@@ -158,27 +205,35 @@ const TeamPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {teamMembers.map((member) => (
-                  <tr key={member._id}>
-                    <td className="member-name-cell">
-                      <div className="member-avatar">
-                        <div className={`avatar-circle ${member.avatar || "blue"}`}></div>
-                      </div>
-                      {member.firstName} {member.lastName}
-                    </td>
-                    <td>{member.phone || "+1 (000) 000-0000"}</td>
-                    <td>{member.email}</td>
-                    <td>{member.role}</td>
-                    <td className="actions-cell">
-                      <button className="action-button" onClick={() => handleEditMember(member._id)}>
-                        <Edit size={16} />
-                      </button>
-                      <button className="action-button" onClick={() => handleDeleteMember(member._id)}>
-                        <Trash size={16} />
-                      </button>
+                {teamMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="empty-table-message">
+                      No team members found. Add team members to get started.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  teamMembers.map((member) => (
+                    <tr key={member._id}>
+                      <td className="member-name-cell">
+                        <div className="member-avatar">
+                          <div className={`avatar-circle ${member.avatar || "blue"}`}></div>
+                        </div>
+                        {member.firstName} {member.lastName}
+                      </td>
+                      <td>{member.phone || "+1 (000) 000-0000"}</td>
+                      <td>{member.email}</td>
+                      <td>{member.role}</td>
+                      <td className="actions-cell">
+                        <button className="action-button" onClick={() => handleEditMember(member._id)}>
+                          <Edit size={16} />
+                        </button>
+                        <button className="action-button" onClick={() => handleDeleteMember(member._id)}>
+                          <Trash size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -199,83 +254,61 @@ const TeamPage = () => {
             <div className="modal-content">
               <h2 className="modal-title">Add Team members</h2>
               <p className="modal-description">
-                Talk with colleagues in a group chat. Messages in this group are only visible to its participants. New
-                teammates may only be invited by administrators.
+                Add new team members to collaborate on tickets and chats. New teammates will receive an invitation to
+                join your team.
               </p>
 
-              {!inviteUrl ? (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="name">User name</label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      placeholder="User name"
-                      value={newMember.name}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
+              <div className="form-group">
+                <label htmlFor="name">User name</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  placeholder="User name"
+                  value={newMember.name}
+                  onChange={handleInputChange}
+                  className="form-control"
+                />
+              </div>
 
-                  <div className="form-group">
-                    <label htmlFor="email">Email ID</label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      placeholder="Email ID"
-                      value={newMember.email}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
+              <div className="form-group">
+                <label htmlFor="email">Email ID</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Email ID"
+                  value={newMember.email}
+                  onChange={handleInputChange}
+                  className="form-control"
+                />
+              </div>
 
-                  <div className="form-group">
-                    <label htmlFor="role">Designation</label>
-                    <div className="select-wrapper">
-                      <select
-                        id="role"
-                        name="role"
-                        value={newMember.role}
-                        onChange={handleInputChange}
-                        className="form-control"
-                      >
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <ChevronDown size={16} className="select-icon" />
-                    </div>
-                  </div>
+              <div className="form-group">
+                <label htmlFor="role">Designation</label>
+                <div className="select-wrapper">
+                  <select
+                    id="role"
+                    name="role"
+                    value={newMember.role}
+                    onChange={handleInputChange}
+                    className="form-control"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <ChevronDown size={16} className="select-icon" />
+                </div>
+              </div>
 
-                  <div className="modal-actions">
-                    <button className="cancel-button" onClick={handleCloseAddModal}>
-                      Cancel
-                    </button>
-                    <button className="save-button" onClick={handleSaveMember}>
-                      Create Invitation
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="invite-url-container">
-                    <p>Share this invitation link with your team member:</p>
-                    <div className="invite-url-box">
-                      <input type="text" readOnly value={inviteUrl} className="invite-url-input" />
-                      <button className="copy-button" onClick={handleCopyInviteUrl}>
-                        <Copy size={16} />
-                        {showCopyTooltip && <span className="copy-tooltip">Copied!</span>}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="modal-actions">
-                    <button className="save-button" onClick={handleCloseAddModal}>
-                      Done
-                    </button>
-                  </div>
-                </>
-              )}
+              <div className="modal-actions">
+                <button className="cancel-button" onClick={handleCloseAddModal}>
+                  Cancel
+                </button>
+                <button className="save-button" onClick={handleSaveMember}>
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>

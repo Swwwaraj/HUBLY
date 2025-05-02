@@ -1,32 +1,37 @@
 "use client"
 
 import { createContext, useState, useContext, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { authAPI } from "../services/api"
+import api from "../services/api"
 
-const AuthContext = createContext()
+// Create the AuthContext
+const AuthContext = createContext(null)
 
-export const useAuth = () => useContext(AuthContext)
+// Custom hook to use the AuthContext
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
+}
 
+// AuthProvider component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const navigate = useNavigate()
 
-  // Check if user is already logged in
+  // Check for existing token and validate on mount
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token")
       if (token) {
         try {
-          const response = await authAPI.getProfile()
+          const response = await api.get("/auth/me")
           setUser(response.data)
-        } catch (error) {
-          console.error("Authentication error:", error)
-          // Clear invalid token
+        } catch (err) {
+          console.error("Token validation failed:", err)
           localStorage.removeItem("token")
-          setUser(null)
         }
       }
       setLoading(false)
@@ -35,45 +40,51 @@ export const AuthProvider = ({ children }) => {
     checkAuth()
   }, [])
 
-  // Login function
+  // Real login function that calls the API
   const login = async (credentials) => {
     try {
+      setLoading(true)
       setError(null)
-      const response = await authAPI.login(credentials)
-      const { token, user } = response.data
+
+      const response = await api.post("/auth/login", credentials)
 
       // Store token in localStorage
-      localStorage.setItem("token", token)
+      localStorage.setItem("token", response.data.token)
 
-      // Set user in state
-      setUser(user)
+      // Store user in state
+      setUser(response.data.user)
 
-      return { success: true }
-    } catch (error) {
-      console.error("Login error:", error)
-      setError(error.response?.data?.message || "Login failed. Please try again.")
-      return { success: false, error: error.response?.data?.message || "Login failed" }
+      return response.data.user
+    } catch (err) {
+      console.error("Login error:", err)
+      setError(err.response?.data?.message || "Login failed. Please check your credentials.")
+      throw err
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Register function
+  // Real register function that calls the API
   const register = async (userData) => {
     try {
+      setLoading(true)
       setError(null)
-      const response = await authAPI.register(userData)
-      const { token, user } = response.data
+
+      const response = await api.post("/auth/register", userData)
 
       // Store token in localStorage
-      localStorage.setItem("token", token)
+      localStorage.setItem("token", response.data.token)
 
-      // Set user in state
-      setUser(user)
+      // Store user in state
+      setUser(response.data.user)
 
-      return { success: true }
-    } catch (error) {
-      console.error("Registration error:", error)
-      setError(error.response?.data?.message || "Registration failed. Please try again.")
-      return { success: false, error: error.response?.data?.message || "Registration failed" }
+      return response.data.user
+    } catch (err) {
+      console.error("Registration error:", err)
+      setError(err.response?.data?.message || "Registration failed. Please try again.")
+      throw err
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -81,36 +92,21 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("token")
     setUser(null)
-    navigate("/login")
   }
 
-  // Update profile function
-  const updateProfile = async (userData) => {
-    try {
-      setError(null)
-      const response = await authAPI.updateProfile(userData)
-      setUser(response.data)
-      return { success: true }
-    } catch (error) {
-      console.error("Update profile error:", error)
-      setError(error.response?.data?.message || "Update failed. Please try again.")
-      return { success: false, error: error.response?.data?.message || "Update failed" }
-    }
+  // Check if user is authenticated
+  const isAuthenticated = !!user
+
+  // Value to be provided by the context
+  const value = {
+    user,
+    loading,
+    error,
+    login,
+    register,
+    logout,
+    isAuthenticated,
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        error,
-        login,
-        register,
-        logout,
-        updateProfile,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

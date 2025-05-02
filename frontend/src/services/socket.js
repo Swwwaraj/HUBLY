@@ -7,12 +7,13 @@ export const initSocket = (token) => {
     socket.disconnect()
   }
 
-  const backendUrl = process.env.BACKEND_URL || "http://localhost:5000"
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000"
 
   socket = io(backendUrl, {
     auth: { token },
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
+    timeout: 10000,
   })
 
   socket.on("connect", () => {
@@ -35,49 +36,49 @@ export const initSocket = (token) => {
 }
 
 export const joinChatRoom = (chatId) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("join-chat", chatId)
   }
 }
 
 export const leaveChatRoom = (chatId) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("leave-chat", chatId)
   }
 }
 
 export const joinTicketRoom = (ticketId) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("join-ticket", ticketId)
   }
 }
 
 export const leaveTicketRoom = (ticketId) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("leave-ticket", ticketId)
   }
 }
 
 export const sendChatMessage = (chatId, message) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("chat:message", { chatId, message })
   }
 }
 
 export const createNewChat = (adminId, userInfo, initialMessage) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("chat:new", { adminId, userInfo, initialMessage })
   }
 }
 
 export const updateTicket = (ticketId, updates) => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("ticket:update", { ticketId, updates })
   }
 }
 
 export const checkMissedChats = () => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.emit("check-missed-chats")
   }
 }

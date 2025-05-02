@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Send } from "react-feather"
 import { chatAPI } from "../services/api"
-import "../styles/chat-widget.css"
+import { getSocket } from "../services/socket"
 
 const ChatWidget = ({ onClose, adminId }) => {
   const [showIntroForm, setShowIntroForm] = useState(true)
@@ -13,41 +13,54 @@ const ChatWidget = ({ onClose, adminId }) => {
     phone: "",
     email: "",
   })
-  const [messages, setMessages] = useState([{ id: 1, sender: "bot", text: "How can I help you?" }])
+  const [messages, setMessages] = useState([])
   const [inputMessage, setInputMessage] = useState("")
   const [chatId, setChatId] = useState(null)
-  const [chatbotSettings, setChatbotSettings] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef(null)
+
+  // Load initial bot message
+  useEffect(() => {
+    setMessages([{ id: 1, sender: "bot", text: "Hey! How can I help you today?" }])
+  }, [])
 
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Load chatbot settings
+  // Listen for socket events
   useEffect(() => {
-    const loadChatbotSettings = async () => {
-      try {
-        if (adminId) {
-          const response = await chatAPI.getChatbotSettings(adminId)
-          setChatbotSettings(response.data)
+    if (chatId) {
+      const socket = getSocket()
 
-          // Update welcome message and appearance
-          setMessages([
+      if (!socket) {
+        // For public chat widget, we don't need authentication
+        // We'll handle messages through REST API
+        return
+      }
+
+      // Listen for new messages
+      const handleNewMessage = (data) => {
+        if (data.chatId === chatId) {
+          setMessages((prev) => [
+            ...prev,
             {
-              id: 1,
-              sender: "bot",
-              text: response.data.initialMessage || "How can I help you?",
+              id: prev.length + 1,
+              sender: data.message.sender === "agent" ? "bot" : "user",
+              text: data.message.content,
             },
           ])
         }
-      } catch (error) {
-        console.error("Error loading chatbot settings:", error)
+      }
+
+      socket.on("chat:message", handleNewMessage)
+
+      return () => {
+        socket.off("chat:message", handleNewMessage)
       }
     }
-
-    loadChatbotSettings()
-  }, [adminId])
+  }, [chatId])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -59,6 +72,12 @@ const ChatWidget = ({ onClose, adminId }) => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault()
+
+    if (!userInfo.name || !userInfo.email || !userInfo.phone) {
+      return
+    }
+
+    setIsLoading(true)
 
     try {
       // Create a new chat in the backend
@@ -96,16 +115,22 @@ const ChatWidget = ({ onClose, adminId }) => {
       // Create a ticket from this chat
       await chatAPI.createTicketFromChat(response.data._id, {
         title: `New inquiry from ${userInfo.name}`,
-        description: `Customer information:
-Name: ${userInfo.name}
-Email: ${userInfo.email}
-Phone: ${userInfo.phone}
-
-Initial message: Hello, I'd like to learn more about Hubly.`,
+        description: `Customer information:\nName: ${userInfo.name}\nEmail: ${userInfo.email}\nPhone: ${userInfo.phone}\n\nInitial message: Hello, I'd like to learn more about Hubly.`,
         priority: "medium",
       })
     } catch (error) {
       console.error("Error creating chat:", error)
+      // Show error message to user
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          sender: "bot",
+          text: "Sorry, there was an error creating your chat. Please try again.",
+        },
+      ])
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -120,6 +145,8 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
     const sentMessage = inputMessage
     setInputMessage("")
 
+    setIsLoading(true)
+
     try {
       if (chatId) {
         // Add message to existing chat
@@ -132,6 +159,19 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
         await chatAPI.updateTicketFromChat(chatId, {
           comment: sentMessage,
         })
+
+        // Simulate bot response (in a real app, this would come from the server)
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: prev.length + 1,
+              sender: "bot",
+              text: "Thanks for your message! Our team will get back to you shortly.",
+            },
+          ])
+          setIsLoading(false)
+        }, 1000)
       } else if (formSubmitted) {
         // Create a new chat if form was submitted but chatId is not set
         const response = await chatAPI.create({
@@ -153,18 +193,36 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
           description: `Customer message: ${sentMessage}`,
           priority: "medium",
         })
+
+        // Simulate bot response
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: prev.length + 1,
+              sender: "bot",
+              text: "Thanks for your message! Our team will get back to you shortly.",
+            },
+          ])
+          setIsLoading(false)
+        }, 1000)
+      } else {
+        // If no form submitted yet, prompt user to fill the form
+        setShowIntroForm(true)
+        setIsLoading(false)
       }
     } catch (error) {
       console.error("Error sending message:", error)
-    }
-
-    // Simulate bot response
-    setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { id: prev.length + 1, sender: "bot", text: "Thanks for your message! How else can I help you today?" },
+        {
+          id: prev.length + 1,
+          sender: "bot",
+          text: "Sorry, there was an error sending your message. Please try again.",
+        },
       ])
-    }, 1000)
+      setIsLoading(false)
+    }
   }
 
   const handleKeyPress = (e) => {
@@ -173,56 +231,38 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
     }
   }
 
-  // Get styles from chatbot settings
-  const getHeaderStyle = () => {
-    if (chatbotSettings?.headerColor) {
-      return { backgroundColor: chatbotSettings.headerColor }
-    }
-    return { backgroundColor: "#34475B" }
-  }
-
-  const getBodyStyle = () => {
-    if (chatbotSettings?.backgroundColor) {
-      return { backgroundColor: chatbotSettings.backgroundColor }
-    }
-    return { backgroundColor: "#FFFFFF" }
-  }
-
-  const getPlaceholders = () => {
-    if (chatbotSettings) {
-      return {
-        name: chatbotSettings.formName || "Your name",
-        phone: chatbotSettings.formPhone || "+1 (000) 000-0000",
-        email: chatbotSettings.formEmail || "example@gmail.com",
-      }
-    }
-    return {
-      name: "Your name",
-      phone: "+1 (000) 000-0000",
-      email: "example@gmail.com",
-    }
-  }
-
-  const placeholders = getPlaceholders()
-
   return (
     <div className="chat-widget-container">
       <div className="chat-widget">
-        <div className="chat-widget-header" style={getHeaderStyle()}>
+        <div className="chat-widget-header">
           <div className="chat-widget-avatar">
-            <div className="avatar-circle orange"></div>
+            <div className="avatar-circle orange">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16 12C16 12.41 15.66 12.75 15.25 12.75H8.75C8.34 12.75 8 12.41 8 12C8 11.59 8.34 11.25 8.75 11.25H15.25C15.66 11.25 16 11.59 16 12Z"
+                  fill="white"
+                />
+              </svg>
+            </div>
           </div>
           <div className="chat-widget-title">Hubly</div>
           <button className="chat-widget-close" onClick={onClose}>
             ×
           </button>
         </div>
-        <div className="chat-widget-messages" style={getBodyStyle()}>
+        <div className="chat-widget-messages">
           {messages.map((message) => (
             <div key={message.id} className={`chat-widget-message ${message.sender}`}>
               {message.sender === "bot" && (
                 <div className="chat-widget-message-avatar">
-                  <div className="avatar-circle orange"></div>
+                  <div className="avatar-circle orange">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16 12C16 12.41 15.66 12.75 15.25 12.75H8.75C8.34 12.75 8 12.41 8 12C8 11.59 8.34 11.25 8.75 11.25H15.25C15.66 11.25 16 11.59 16 12Z"
+                        fill="white"
+                      />
+                    </svg>
+                  </div>
                 </div>
               )}
               <div className="chat-widget-message-bubble">{message.text}</div>
@@ -235,7 +275,7 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
         {showIntroForm && !formSubmitted && (
           <div className="chat-widget-form-container">
             <div className="chat-widget-form">
-              <div className="chat-widget-form-header">Introduction Yourself</div>
+              <div className="chat-widget-form-header">Introduce Yourself</div>
               <form onSubmit={handleFormSubmit}>
                 <div className="chat-widget-form-group">
                   <label>Your name</label>
@@ -244,7 +284,7 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
                     name="name"
                     value={userInfo.name}
                     onChange={handleInputChange}
-                    placeholder={placeholders.name}
+                    placeholder="Your name"
                     required
                   />
                 </div>
@@ -255,7 +295,7 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
                     name="phone"
                     value={userInfo.phone}
                     onChange={handleInputChange}
-                    placeholder={placeholders.phone}
+                    placeholder="+1 (000) 000-0000"
                     required
                   />
                 </div>
@@ -266,12 +306,12 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
                     name="email"
                     value={userInfo.email}
                     onChange={handleInputChange}
-                    placeholder={placeholders.email}
+                    placeholder="example@gmail.com"
                     required
                   />
                 </div>
-                <button type="submit" className="chat-widget-form-submit">
-                  Thank You!
+                <button type="submit" className="chat-widget-form-submit" disabled={isLoading}>
+                  {isLoading ? "Submitting..." : "Submit"}
                 </button>
               </form>
             </div>
@@ -285,9 +325,13 @@ Initial message: Hello, I'd like to learn more about Hubly.`,
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            disabled={showIntroForm && !formSubmitted}
+            disabled={(showIntroForm && !formSubmitted) || isLoading}
           />
-          <button className="chat-widget-send" onClick={handleSendMessage} disabled={showIntroForm && !formSubmitted}>
+          <button
+            className="chat-widget-send"
+            onClick={handleSendMessage}
+            disabled={(showIntroForm && !formSubmitted) || isLoading || !inputMessage.trim()}
+          >
             <Send size={18} />
           </button>
         </div>

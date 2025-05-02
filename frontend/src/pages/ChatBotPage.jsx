@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { Link } from "react-router-dom"
 import "../styles/chatbot.css"
-import { Edit, Send } from "react-feather"
+import HublyLogo from "../components/HublyLogo"
+import { Home, MessageSquare, BarChart2, FileText, Users, Settings, Edit, Send } from "react-feather"
 import { useAuth } from "../context/AuthContext"
 import { chatAPI } from "../services/api"
 
@@ -213,6 +215,43 @@ const ChatBotPage = () => {
 
   return (
     <div className="chatbot-page">
+      <div className="dashboard-sidebar">
+        <div className="sidebar-logo">
+          <HublyLogo />
+        </div>
+        <div className="sidebar-menu">
+          <Link to="/dashboard" className="sidebar-item">
+            <Home size={20} />
+            <span className="sidebar-text">Dashboard</span>
+          </Link>
+          <Link to="/contact-center" className="sidebar-item">
+            <MessageSquare size={20} />
+            <span className="sidebar-text">Contact Center</span>
+          </Link>
+          <Link to="/analytics" className="sidebar-item">
+            <BarChart2 size={20} />
+            <span className="sidebar-text">Analytics</span>
+          </Link>
+          <Link to="/documents" className="sidebar-item">
+            <FileText size={20} />
+            <span className="sidebar-text">Documents</span>
+          </Link>
+          <Link to="/team" className="sidebar-item">
+            <Users size={20} />
+            <span className="sidebar-text">Team</span>
+          </Link>
+          <Link to="/settings" className="sidebar-item">
+            <Settings size={20} />
+            <span className="sidebar-text">Settings</span>
+          </Link>
+        </div>
+        <div className="sidebar-footer">
+          <button className="help-button">
+            <span className="help-icon">?</span>
+          </button>
+        </div>
+      </div>
+
       <div className="chatbot-content">
         <div className="chatbot-header">
           <h1 className="chatbot-title">Chat Bot</h1>

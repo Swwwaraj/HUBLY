@@ -1,15 +1,16 @@
-/* Update the chatbot-page class to work with the sidebar */
 .chatbot-page {
   display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
+  height: 100vh;
 }
 
-/* Remove the dashboard-sidebar styles since we're using the global Sidebar component */
 .dashboard-sidebar {
-  display: none;
+  width: 80px;
+  background-color: white;
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
 }
 
 .sidebar-logo {
